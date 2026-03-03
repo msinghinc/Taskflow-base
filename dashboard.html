@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root {
+  --bg: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-dark: #0F172A;
+  --bg-header: #FFFFFF;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --accent: #1E293B;
+
+  --prospecting: #6366F1;
+  --underwriting: #E8A838;
+  --loi: #3B82F6;
+  --loi-accepted: #0EA5E9;
+  --psa: #8B5CF6;
+  --closed: #10B981;
+  --dead: #94A3B8;
+
+  --pri-high: #EF4444;
+  --pri-med: #E8A838;
+  --pri-low: #6B7280;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ---- LOGIN ---- */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+}
+.login-container h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--bg-dark);
+  letter-spacing: -1.5px;
+}
+.login-container p { color: var(--text-muted); font-size: 15px; }
+.login-btn {
+  margin-top: 12px;
+  padding: 14px 32px;
+  background: var(--bg-dark);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.login-btn:hover { background: #1a2540; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.login-note { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+/* ---- HEADER ---- */
+.header {
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.header-left { display: flex; align-items: center; gap: 24px; }
+.header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--bg-dark);
+  letter-spacing: -0.8px;
+}
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+/* ---- VIEW TOGGLE ---- */
+.view-toggle {
+  display: flex;
+  background: var(--border-light);
+  border-radius: 8px;
+  padding: 3px;
+}
+.view-btn {
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.view-btn.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* ---- SEARCH ---- */
+.search-input {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  width: 240px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--text-muted); }
+.search-input::placeholder { color: #CBD5E1; }
+
+/* ---- STATS BAR ---- */
+.stats-bar {
+  max-width: 1440px;
+  margin: 20px auto 0;
+  padding: 0 32px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 14px 18px;
+  flex: 1;
+  min-width: 140px;
+}
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--bg-dark);
+}
+.stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ---- MAIN CONTENT ---- */
+.main {
+  max-width: 1440px;
+  margin: 20px auto 40px;
+  padding: 0 32px;
+}
+
+/* ---- KANBAN ---- */
+.kanban {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+.kanban::-webkit-scrollbar { height: 6px; }
+.kanban::-webkit-scrollbar-track { background: transparent; }
+.kanban::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.kanban-col {
+  min-width: 260px;
+  max-width: 300px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+}
+.kanban-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.kanban-col-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.3);
+}
+.kanban-cards { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+.k-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.k-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); }
+.k-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+.k-card-address {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.k-card-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.k-metric {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.k-metric strong { color: var(--text); }
+.k-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+.k-priority {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.k-score {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+.k-links { display: flex; gap: 4px; margin-top: 6px; }
+.k-link-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.k-link-pill:hover { opacity: 0.8; }
+
+/* ---- TABLE ---- */
+.table-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--border-light);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+thead th:hover { color: var(--text); }
+thead th .sort-arrow { font-size: 9px; margin-left: 4px; }
+tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.1s;
+}
+tbody tr:hover { background: #FAFBFC; }
+tbody td {
+  padding: 10px 14px;
+  white-space: nowrap;
+  color: var(--text);
+}
+.td-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.td-address { color: var(--text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.stage-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.pri-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.td-link {
+  color: #3B82F6;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 11px;
+}
+.td-link:hover { text-decoration: underline; }
+.td-score {
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+/* ---- DETAIL MODAL ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.4);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+  animation: slideUp 0.2s ease;
+}
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.modal-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--bg-dark);
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.modal-body { padding: 20px 24px; }
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.modal-metric {
+  background: var(--border-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.modal-metric-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+.modal-metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-section {
+  margin-bottom: 14px;
+}
+.modal-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.modal-info {
+  background: var(--border-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.modal-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.modal-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.modal-link-pill:hover { opacity: 0.8; }
+
+/* ---- EMPTY STATE ---- */
+.empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+.empty p { font-size: 13px; }
+
+/* ---- LOADING ---- */
+.loading { text-align: center; padding: 60px; color: var(--text-muted); font-size: 14px; }
+
+/* ---- ANIMATIONS ---- */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 768px) {
+  .stats-bar { flex-direction: column; }
+  .kanban-col { min-width: 240px; }
+  .header-inner { padding: 0; }
+  .search-input { width: 160px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ============================================================
+// TaskFlow Dashboard
+// Reads from the same Google Sheet the extension syncs to
+// ============================================================
+
+const CLIENT_ID = "259209463080-lv24g90qhqmh3mskh4c17iu16b4glq9n.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
+
+const STAGES = [
+  { id: "prospecting", label: "Prospecting", color: "#6366F1" },
+  { id: "underwriting", label: "Underwriting", color: "#E8A838" },
+  { id: "loi", label: "LOI Submitted", color: "#3B82F6" },
+  { id: "loi_accepted", label: "LOI Accepted", color: "#0EA5E9" },
+  { id: "psa", label: "Under PSA", color: "#8B5CF6" },
+  { id: "closed", label: "Closed", color: "#10B981" },
+  { id: "dead", label: "Dead", color: "#94A3B8" },
+];
+
+const PRIORITIES = {
+  high: { label: "High", color: "#EF4444", bg: "#FEF2F2" },
+  medium: { label: "Med", color: "#E8A838", bg: "#FFFBEB" },
+  low: { label: "Low", color: "#6B7280", bg: "#F9FAFB" },
+};
+
+let state = {
+  authenticated: false,
+  accessToken: null,
+  tokenClient: null,
+  spreadsheetId: null,
+  deals: [],
+  view: "kanban",
+  search: "",
+  sortCol: null,
+  sortDir: "asc",
+  selectedDeal: null,
+  loading: false,
+};
+
+const app = document.getElementById("app");
+
+// ---- FORMATTING ----
+function fmt$(n) { n=parseFloat(n); if(!n&&n!==0)return"—"; if(n>=1e6)return"$"+(n/1e6).toFixed(2)+"M"; if(n>=1e3)return"$"+(n/1e3).toFixed(0)+"K"; return"$"+n.toLocaleString(); }
+function fmtNum(n) { n=parseFloat(n); if(!n&&n!==0)return"—"; return n.toLocaleString(); }
+function esc(s) { if(!s)return""; const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+function stg(id) { return STAGES.find(s=>s.id===id)||STAGES[0]; }
+function pri(id) { return PRIORITIES[id]||PRIORITIES.medium; }
+
+function scoreColor(s) {
+  s=parseFloat(s); if(!s)return"#94A3B8";
+  if(s<=3) return`rgb(${239},${68+(s-1)*30},${68})`;
+  if(s<=6) return`rgb(${239-(s-4)*30},${168+(s-4)*20},${68})`;
+  return`rgb(${16+(10-s)*20},${185-(10-s)*10},${129})`;
+}
+function scoreBg(s) {
+  s=parseFloat(s); if(!s)return"#F9FAFB";
+  if(s<=3) return"#FEF2F2"; if(s<=6) return"#FFFBEB"; return"#F0FDF4";
+}
+
+// ---- AUTH ----
+function initAuth() {
+  state.tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { console.error("Auth error:", resp); return; }
+      state.accessToken = resp.access_token;
+      state.authenticated = true;
+      await findSpreadsheet();
+      await loadDeals();
+      render();
+    }
+  });
+}
+
+function doLogin() {
+  state.tokenClient.requestAccessToken({ prompt: "consent" });
+}
+
+async function apiGet(url) {
+  const resp = await fetch(url, { headers: { "Authorization": "Bearer " + state.accessToken } });
+  if (resp.status === 401) { state.authenticated = false; render(); return null; }
+  return resp.json();
+}
+
+async function findSpreadsheet() {
+  // Search Drive for the TaskFlow spreadsheet
+  const searchUrl = "https://www.googleapis.com/drive/v3/files?q=" +
+    encodeURIComponent("name='TaskFlow Data' and mimeType='application/vnd.google-apps.spreadsheet'") +
+    "&fields=files(id,name)&orderBy=modifiedTime desc";
+
+  // Need drive.readonly scope too — but we only have sheets.readonly
+  // Instead, try to load from localStorage or prompt for spreadsheet ID
+  let ssId = localStorage.getItem("taskflow_spreadsheet_id");
+  if (!ssId) {
+    ssId = prompt("Enter your TaskFlow spreadsheet ID.\n\nYou can find it in the URL of your TaskFlow Data spreadsheet:\nhttps://docs.google.com/spreadsheets/d/{THIS_PART}/edit");
+    if (ssId) localStorage.setItem("taskflow_spreadsheet_id", ssId);
+  }
+  state.spreadsheetId = ssId;
+}
+
+async function loadDeals() {
+  if (!state.spreadsheetId) return;
+  state.loading = true;
+  render();
+
+  const data = await apiGet(SHEETS_BASE + "/" + state.spreadsheetId + "/values/Acquisitions");
+  if (!data || !data.values || data.values.length < 2) { state.deals = []; state.loading = false; return; }
+
+  const headers = data.values[0];
+  state.deals = data.values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] || ""; });
+    obj.askingPrice = parseFloat(obj.askingPrice) || 0;
+    obj.noi = parseFloat(obj.noi) || 0;
+    obj.capRate = parseFloat(obj.capRate) || 0;
+    obj.sqft = parseFloat(obj.sqft) || 0;
+    obj.createdAt = parseInt(obj.createdAt) || Date.now();
+    obj.lastActivity = parseInt(obj.lastActivity) || Date.now();
+    return obj;
+  });
+  state.loading = false;
+}
+
+// ---- FILTERING ----
+function filteredDeals() {
+  let list = state.deals;
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    list = list.filter(d =>
+      (d.name||"").toLowerCase().includes(q) ||
+      (d.address||"").toLowerCase().includes(q) ||
+      (d.broker||"").toLowerCase().includes(q) ||
+      (d.brokerContact||"").toLowerCase().includes(q)
+    );
+  }
+  return list;
+}
+
+function sortedDeals(deals) {
+  if (!state.sortCol) return deals;
+  const col = state.sortCol;
+  const dir = state.sortDir === "asc" ? 1 : -1;
+  return [...deals].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (typeof va === "number" || !isNaN(parseFloat(va))) {
+      return (parseFloat(va||0) - parseFloat(vb||0)) * dir;
+    }
+    return String(va||"").localeCompare(String(vb||"")) * dir;
+  });
+}
+
+// ---- RENDER ----
+function render() {
+  if (!state.authenticated) { renderLogin(); return; }
+  if (state.loading) { app.innerHTML = renderHeader() + `<div class="loading">Loading deals...</div>`; wireHeaderEvents(); return; }
+
+  let h = renderHeader();
+  h += renderStats();
+  h += `<div class="main">`;
+  if (state.view === "kanban") h += renderKanban();
+  else h += renderTable();
+  h += `</div>`;
+  if (state.selectedDeal) h += renderModal(state.selectedDeal);
+  app.innerHTML = h;
+  wireHeaderEvents();
+  wireEvents();
+}
+
+function renderLogin() {
+  app.innerHTML = `<div class="login-container">
+    <h1>TaskFlow</h1>
+    <p>Deal pipeline dashboard</p>
+    <button class="login-btn" id="login-btn">Connect Google Account</button>
+    <span class="login-note">Read-only access to your TaskFlow spreadsheet</span>
+  </div>`;
+  document.getElementById("login-btn").addEventListener("click", doLogin);
+}
+
+function renderHeader() {
+  return `<div class="header"><div class="header-inner">
+    <div class="header-left">
+      <h1>TaskFlow</h1>
+      <div class="view-toggle">
+        <button class="view-btn ${state.view==='kanban'?'active':''}" data-view="kanban">Kanban</button>
+        <button class="view-btn ${state.view==='table'?'active':''}" data-view="table">Table</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <input type="text" class="search-input" id="search-input" placeholder="Search deals..." value="${esc(state.search)}">
+      <button class="login-btn" style="padding:8px 16px;font-size:12px" id="refresh-btn">↻ Refresh</button>
+    </div>
+  </div></div>`;
+}
+
+function wireHeaderEvents() {
+  document.querySelectorAll("[data-view]").forEach(btn => {
+    btn.addEventListener("click", () => { state.view = btn.dataset.view; render(); });
+  });
+  const searchEl = document.getElementById("search-input");
+  if (searchEl) {
+    searchEl.addEventListener("input", (e) => { state.search = e.target.value; render(); searchEl.focus(); });
+    // Restore cursor position
+    if (document.activeElement === searchEl) searchEl.setSelectionRange(searchEl.value.length, searchEl.value.length);
+  }
+  const refreshBtn = document.getElementById("refresh-btn");
+  if (refreshBtn) refreshBtn.addEventListener("click", async () => { await loadDeals(); render(); });
+}
+
+function renderStats() {
+  const deals = filteredDeals();
+  const active = deals.filter(d => d.stage !== "dead" && d.stage !== "closed");
+  const totalPipeline = active.reduce((s, d) => s + d.askingPrice, 0);
+  const avgCap = active.length ? (active.reduce((s,d) => s + d.capRate, 0) / active.length) : 0;
+  const uwCount = deals.filter(d => d.stage === "underwriting").length;
+  const loiCount = deals.filter(d => d.stage === "loi" || d.stage === "loi_accepted").length;
+  const psaCount = deals.filter(d => d.stage === "psa").length;
+  const closedCount = deals.filter(d => d.stage === "closed").length;
+
+  return `<div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Active Pipeline</div><div class="stat-value">${active.length}</div><div class="stat-sub">deals</div></div>
+    <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-value">${fmt$(totalPipeline)}</div><div class="stat-sub">asking price</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Cap Rate</div><div class="stat-value">${avgCap.toFixed(2)}%</div><div class="stat-sub">active deals</div></div>
+    <div class="stat-card"><div class="stat-label">Underwriting</div><div class="stat-value">${uwCount}</div><div class="stat-sub">deals</div></div>
+    <div class="stat-card"><div class="stat-label">LOI Out</div><div class="stat-value">${loiCount}</div><div class="stat-sub">submitted + accepted</div></div>
+    <div class="stat-card"><div class="stat-label">Under PSA</div><div class="stat-value">${psaCount}</div><div class="stat-sub">deals</div></div>
+    <div class="stat-card"><div class="stat-label">Closed</div><div class="stat-value">${closedCount}</div><div class="stat-sub">deals</div></div>
+  </div>`;
+}
+
+// ---- KANBAN ----
+function renderKanban() {
+  const deals = filteredDeals();
+  const visibleStages = STAGES.filter(s => s.id !== "dead");
+  let h = `<div class="kanban">`;
+  visibleStages.forEach(stage => {
+    const stageDeals = deals.filter(d => d.stage === stage.id);
+    h += `<div class="kanban-col">
+      <div class="kanban-col-header" style="background:${stage.color}15">
+        <span class="kanban-col-title" style="color:${stage.color}">${stage.label}</span>
+        <span class="kanban-col-count" style="color:${stage.color}">${stageDeals.length}</span>
+      </div>
+      <div class="kanban-cards">`;
+    if (!stageDeals.length) {
+      h += `<div style="text-align:center;padding:20px 10px;color:#CBD5E1;font-size:11px">No deals</div>`;
+    }
+    stageDeals.forEach(d => {
+      const p = pri(d.priority);
+      const sc = parseFloat(d.score);
+      h += `<div class="k-card" data-deal-id="${esc(d.id)}">
+        <div class="k-card-name">${esc(d.name)}</div>
+        <div class="k-card-address">${esc(d.address)}</div>
+        <div class="k-card-metrics">
+          <span class="k-metric"><strong>${fmt$(d.askingPrice)}</strong></span>
+          <span class="k-metric">${d.capRate}% cap</span>
+          ${d.sqft ? `<span class="k-metric">${fmtNum(d.sqft)} SF</span>` : ""}
+        </div>`;
+
+      // Links
+      const links = [];
+      if (d.listingLink) {
+        const src = d.listingLink.includes("crexi") ? "Crexi" : d.listingLink.includes("costar") ? "CoStar" : "Listing";
+        links.push({ label: src, url: d.listingLink, color: "#3B82F6", bg: "#EFF6FF" });
+      }
+      if (d.loiLink) links.push({ label: "LOI", url: d.loiLink, color: "#16A34A", bg: "#F0FDF4" });
+      if (links.length) {
+        h += `<div class="k-links">`;
+        links.forEach(l => { h += `<a href="${esc(l.url)}" target="_blank" class="k-link-pill" style="color:${l.color};background:${l.bg}">${l.label}</a>`; });
+        h += `</div>`;
+      }
+
+      h += `<div class="k-card-footer">
+          <span class="k-priority" style="color:${p.color};background:${p.bg}">${p.label}</span>`;
+      if (sc) h += `<span class="k-score" style="color:${scoreColor(sc)};background:${scoreBg(sc)}">${sc}/10</span>`;
+      h += `</div></div>`;
+    });
+    h += `</div></div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+// ---- TABLE ----
+function renderTable() {
+  const deals = sortedDeals(filteredDeals());
+  const cols = [
+    { key: "name", label: "Deal Name" },
+    { key: "address", label: "Address" },
+    { key: "stage", label: "Stage" },
+    { key: "priority", label: "Priority" },
+    { key: "askingPrice", label: "Price" },
+    { key: "noi", label: "NOI" },
+    { key: "capRate", label: "Cap Rate" },
+    { key: "sqft", label: "Sq Ft" },
+    { key: "score", label: "Score" },
+    { key: "broker", label: "Broker" },
+    { key: "propertyType", label: "Type" },
+  ];
+
+  let h = `<div class="table-container"><div class="table-wrap"><table><thead><tr>`;
+  cols.forEach(c => {
+    const isSort = state.sortCol === c.key;
+    const arrow = isSort ? (state.sortDir === "asc" ? "▲" : "▼") : "";
+    h += `<th data-sort="${c.key}">${c.label} <span class="sort-arrow">${arrow}</span></th>`;
+  });
+  h += `<th>Links</th></tr></thead><tbody>`;
+
+  if (!deals.length) {
+    h += `<tr><td colspan="${cols.length + 1}" style="text-align:center;padding:40px;color:#94A3B8">No deals found</td></tr>`;
+  }
+
+  deals.forEach(d => {
+    const s = stg(d.stage);
+    const p = pri(d.priority);
+    const sc = parseFloat(d.score);
+    const ptMap = { stnnn:"ST NNN", multi:"Multi-Retail", industrial:"Industrial", outparcel:"Outparcel", other:"Other" };
+
+    h += `<tr data-deal-id="${esc(d.id)}" style="cursor:pointer">
+      <td class="td-name">${esc(d.name)}</td>
+      <td class="td-address">${esc(d.address)}</td>
+      <td><span class="stage-badge" style="color:${s.color};background:${s.color}15">${s.label}</span></td>
+      <td><span class="pri-badge" style="color:${p.color};background:${p.bg}">${p.label}</span></td>
+      <td style="font-weight:600">${fmt$(d.askingPrice)}</td>
+      <td>${fmt$(d.noi)}</td>
+      <td>${d.capRate ? d.capRate + "%" : "—"}</td>
+      <td>${d.sqft ? fmtNum(d.sqft) : "—"}</td>
+      <td>${sc ? `<span class="td-score" style="color:${scoreColor(sc)};background:${scoreBg(sc)}">${sc}</span>` : "—"}</td>
+      <td>${esc(d.broker)}${d.brokerContact ? " — " + esc(d.brokerContact) : ""}</td>
+      <td>${ptMap[d.propertyType] || d.propertyType || "—"}</td>
+      <td>`;
+    if (d.listingLink) { const src = d.listingLink.includes("crexi")?"Crexi":d.listingLink.includes("costar")?"CoStar":"Link"; h += `<a href="${esc(d.listingLink)}" target="_blank" class="td-link">${src}</a> `; }
+    if (d.loiLink) h += `<a href="${esc(d.loiLink)}" target="_blank" class="td-link">LOI</a> `;
+    if (d.uwLink) h += `<a href="${esc(d.uwLink)}" target="_blank" class="td-link">UW</a> `;
+    h += `</td></tr>`;
+  });
+
+  h += `</tbody></table></div></div>`;
+  return h;
+}
+
+// ---- MODAL ----
+function renderModal(d) {
+  const s = stg(d.stage);
+  const p = pri(d.priority);
+  const sc = parseFloat(d.score);
+  const priceSf = d.sqft > 0 ? "$" + Math.round(d.askingPrice / d.sqft) : "—";
+  const ptMap = { stnnn:"Single Tenant NNN", multi:"Multi-Tenant Retail", industrial:"Industrial", outparcel:"Outparcel", other:"Other" };
+
+  let h = `<div class="modal-overlay" id="modal-overlay"><div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>${esc(d.name)}</h2>
+        <div style="margin-top:4px;display:flex;gap:8px;align-items:center">
+          <span class="stage-badge" style="color:${s.color};background:${s.color}15">${s.label}</span>
+          <span class="pri-badge" style="color:${p.color};background:${p.bg}">${p.label}</span>
+          ${sc ? `<span class="td-score" style="color:${scoreColor(sc)};background:${scoreBg(sc)}">${sc}/10</span>` : ""}
+        </div>
+      </div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${esc(d.address)}</div>
+      </div>
+      <div class="modal-grid">`;
+
+  [["Asking Price", fmt$(d.askingPrice)], ["NOI", fmt$(d.noi)], ["Cap Rate", d.capRate ? d.capRate+"%" : "—"],
+   ["Sq Ft", d.sqft ? fmtNum(d.sqft) : "—"], ["Acreage", d.acreage || "—"], ["Price/SF", priceSf],
+   ["# Tenants", d.numTenants || "—"], ["WALT", d.walt || "—"], ["Type", ptMap[d.propertyType] || "—"],
+   ["3mi Pop", d.pop3mi ? fmtNum(d.pop3mi) : "—"], ["3mi AHI", d.ahi3mi ? fmt$(d.ahi3mi) : "—"], ["Score", sc ? sc+"/10" : "—"]
+  ].forEach(([l,v]) => {
+    h += `<div class="modal-metric"><div class="modal-metric-label">${l}</div><div class="modal-metric-value">${v}</div></div>`;
+  });
+  h += `</div>`;
+
+  // Broker
+  if (d.broker || d.brokerContact || d.brokerPhone || d.brokerEmail) {
+    h += `<div class="modal-section"><div class="modal-section-label">Broker</div><div class="modal-info">`;
+    if (d.broker) h += `<strong>${esc(d.broker)}</strong>`;
+    if (d.brokerContact) h += ` — ${esc(d.brokerContact)}`;
+    if (d.brokerPhone) h += `<br>📞 ${esc(d.brokerPhone)}`;
+    if (d.brokerEmail) h += `<br>✉ ${esc(d.brokerEmail)}`;
+    h += `</div></div>`;
+  }
+
+  // Links
+  const links = [];
+  if (d.listingLink) { const src=d.listingLink.includes("crexi")?"Crexi Listing":d.listingLink.includes("costar")?"CoStar Listing":"Listing"; links.push({label:src,url:d.listingLink,color:"#3B82F6",bg:"#EFF6FF",border:"#BFDBFE"}); }
+  if (d.uwLink) links.push({label:"Underwriting",url:d.uwLink,color:"#8B5CF6",bg:"#F5F3FF",border:"#DDD6FE"});
+  if (d.costarLink) links.push({label:"CoStar Property",url:d.costarLink,color:"#0EA5E9",bg:"#F0F9FF",border:"#BAE6FD"});
+  if (d.loiLink) links.push({label:"View LOI",url:d.loiLink,color:"#16A34A",bg:"#F0FDF4",border:"#BBF7D0"});
+
+  if (links.length) {
+    h += `<div class="modal-section"><div class="modal-section-label">Links</div><div class="modal-links">`;
+    links.forEach(l => {
+      h += `<a href="${esc(l.url)}" target="_blank" class="modal-link-pill" style="color:${l.color};background:${l.bg};border:1px solid ${l.border}">🔗 ${l.label}</a>`;
+    });
+    h += `</div></div>`;
+  }
+
+  // Notes
+  if (d.notes) {
+    h += `<div class="modal-section"><div class="modal-section-label">Notes</div><div class="modal-info">${esc(d.notes)}</div></div>`;
+  }
+
+  h += `</div></div></div>`;
+  return h;
+}
+
+// ---- EVENT WIRING ----
+function wireEvents() {
+  // Deal card clicks (kanban)
+  document.querySelectorAll(".k-card[data-deal-id]").forEach(card => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return; // Don't trigger on link clicks
+      state.selectedDeal = state.deals.find(d => d.id === card.dataset.dealId);
+      render();
+    });
+  });
+
+  // Table row clicks
+  document.querySelectorAll("tbody tr[data-deal-id]").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      state.selectedDeal = state.deals.find(d => d.id === row.dataset.dealId);
+      render();
+    });
+  });
+
+  // Sort headers
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.sort;
+      if (state.sortCol === col) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      else { state.sortCol = col; state.sortDir = "asc"; }
+      render();
+    });
+  });
+
+  // Modal close
+  const overlay = document.getElementById("modal-overlay");
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) { state.selectedDeal = null; render(); }
+    });
+  }
+  const closeBtn = document.getElementById("modal-close");
+  if (closeBtn) closeBtn.addEventListener("click", () => { state.selectedDeal = null; render(); });
+}
+
+// ---- INIT ----
+function waitForGIS() {
+  if (typeof google !== "undefined" && google.accounts) {
+    initAuth();
+    render();
+  } else {
+    setTimeout(waitForGIS, 100);
+  }
+}
+waitForGIS();
+</script>
+</body>
+</html>

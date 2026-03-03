@@ -1,0 +1,757 @@
+/* ============================================
+   TaskFlow Side Panel Styles
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  background: #F8FAFC;
+  color: #1E293B;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---- Header ---- */
+.header {
+  padding: 16px 18px 0;
+  background: #fff;
+  border-bottom: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.header h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.5px;
+}
+
+.header-date {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #94A3B8;
+  padding: 4px 0;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+}
+
+.sync-dot.disconnected {
+  background: #EF4444;
+}
+
+.sync-dot.syncing {
+  background: #E8A838;
+  animation: pulse 1s infinite;
+}
+
+/* ---- Section Tabs ---- */
+.section-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 12px;
+  padding: 3px;
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+.section-tab {
+  flex: 1;
+  padding: 9px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: transparent;
+  color: #94A3B8;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.section-tab.active {
+  background: #fff;
+  color: #1E293B;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* ---- Filter Bar ---- */
+.filter-bar {
+  padding: 8px 18px 4px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.filter-btn {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  color: #94A3B8;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-btn.active {
+  background: #1E293B;
+  color: #fff;
+  border-color: #1E293B;
+  font-weight: 700;
+}
+
+.filter-btn.stage-active {
+  font-weight: 700;
+}
+
+/* ---- Content Area ---- */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 18px 10px;
+}
+
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
+
+/* ---- Cards ---- */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #F1F5F9;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.card-header {
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.card-subtitle {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-bottom: 6px;
+}
+
+.card-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag-price {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.tag-cap {
+  font-size: 11px;
+  color: #64748B;
+}
+
+/* ---- Card Expanded ---- */
+.card-expanded {
+  padding: 0 14px 14px;
+  border-top: 1px solid #F8FAFC;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.metric-box {
+  background: #F8FAFC;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 9px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.info-box {
+  background: #F8FAFC;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.info-label {
+  font-size: 9px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.info-value {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* ---- Stage Selector ---- */
+.stage-selector {
+  margin-bottom: 8px;
+}
+
+.stage-buttons {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.stage-btn {
+  padding: 3px 7px;
+  font-size: 9px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  color: #94A3B8;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.stage-btn.active {
+  font-weight: 700;
+}
+
+/* ---- Task Items ---- */
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #F8FAFC;
+}
+
+.task-item:last-child {
+  border-bottom: none;
+}
+
+.checkbox {
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.task-text {
+  font-size: 12px;
+  color: #1E293B;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.task-text.completed {
+  color: #94A3B8;
+  text-decoration: line-through;
+}
+
+.task-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+  align-items: center;
+}
+
+.task-meta span {
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+.task-meta .overdue {
+  color: #EF4444;
+}
+
+.task-meta .priority-high {
+  font-weight: 600;
+  color: #EF4444;
+}
+
+.task-meta .priority-medium {
+  font-weight: 600;
+  color: #E8A838;
+}
+
+/* ---- Progress Bar ---- */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #F1F5F9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---- Property Card ---- */
+.property-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.property-stats {
+  display: flex;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.property-stats span {
+  font-size: 10px;
+  color: #64748B;
+}
+
+.task-badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  padding-left: 20px;
+}
+
+.badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-blue {
+  background: #EFF6FF;
+  color: #3B82F6;
+}
+
+.badge-red {
+  background: #FEF2F2;
+  color: #EF4444;
+}
+
+/* ---- Add Task Button (dashed) ---- */
+.add-task-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  background: #F8FAFC;
+  border: 1px dashed #E2E8F0;
+  border-radius: 6px;
+  color: #94A3B8;
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.add-task-btn:hover {
+  border-color: #94A3B8;
+  color: #64748B;
+}
+
+/* ---- Bottom Bar ---- */
+.bottom-bar {
+  padding: 10px 18px 14px;
+  flex-shrink: 0;
+  border-top: 1px solid #F1F5F9;
+  background: #fff;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 10px;
+  background: #1E293B;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: #0F172A;
+}
+
+.btn-secondary {
+  padding: 10px 14px;
+  background: #F1F5F9;
+  border: none;
+  border-radius: 10px;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #E2E8F0;
+}
+
+/* ---- Overlay / Form ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(248,250,252,0.97);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(4px);
+}
+
+.overlay-header {
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.overlay-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.overlay-close {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.overlay-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px 18px;
+}
+
+.overlay-footer {
+  padding: 10px 18px 16px;
+  flex-shrink: 0;
+}
+
+/* ---- Form Fields ---- */
+.field {
+  margin-bottom: 10px;
+}
+
+.field label {
+  display: block;
+  font-size: 10px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: #1E293B;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #94A3B8;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: #CBD5E1;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.field-row {
+  display: grid;
+  gap: 8px;
+}
+
+.field-row-2 { grid-template-columns: 1fr 1fr; }
+.field-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ---- Toggle Buttons ---- */
+.toggle-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.toggle-btn {
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toggle-btn.active {
+  background: #1E293B;
+  color: #fff;
+  border-color: #1E293B;
+  font-weight: 700;
+}
+
+.priority-btn {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: capitalize;
+}
+
+/* ---- Delete Button ---- */
+.btn-delete {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 6px;
+  color: #EF4444;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ---- Empty State ---- */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #CBD5E1;
+}
+
+.empty-state h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.empty-state p {
+  font-size: 11px;
+}
+
+/* ---- Login Screen ---- */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 30px;
+  text-align: center;
+}
+
+.login-screen h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin-bottom: 8px;
+}
+
+.login-screen p {
+  font-size: 13px;
+  color: #94A3B8;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.btn-google {
+  padding: 12px 24px;
+  background: #1E293B;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-google:hover {
+  background: #0F172A;
+}
+
+.login-note {
+  font-size: 11px;
+  color: #CBD5E1;
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
+/* ---- Chevron ---- */
+.chevron {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: #CBD5E1;
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* ---- Animations ---- */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: fadeIn 0.2s ease;
+}
