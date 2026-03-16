@@ -1,5 +1,5 @@
 // ============================================================
-// TaskFlow CoStar Scraper v4.1
+// CREFlow CoStar Scraper v4.1
 // Added: Demographics + Traffic extraction
 // ============================================================
 
@@ -19,6 +19,15 @@ function getKpi(baseId) {
 
 function parseMoney(str) {
   if (!str) return 0;
+  const s = str.trim().toUpperCase();
+  // Handle M/B/K suffixes like $4.5M, $850K, $1.2B
+  const suffixMatch = s.match(/([\d.,]+)\s*(B|M|K)/);
+  if (suffixMatch) {
+    const num = parseFloat(suffixMatch[1].replace(/,/g, ""));
+    const mult = suffixMatch[2] === "B" ? 1e9 : suffixMatch[2] === "M" ? 1e6 : 1e3;
+    const result = num * mult;
+    return Number.isFinite(result) ? result : 0;
+  }
   const cleaned = str.replace(/[^0-9.]/g, "");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
@@ -240,69 +249,113 @@ async function waitForAnyData(timeoutMs = 8000) {
   return extractCostarData();
 }
 
+// Scroll page to load lazy sections (demographics, traffic)
+async function scrollToLoadSections() {
+  const scrollTarget = document.querySelector('[automation-id="demographics-ic"]') ||
+                       document.querySelector('[automation-id="traffic-ic"]');
+  if (scrollTarget) {
+    scrollTarget.scrollIntoView({ behavior: "instant", block: "center" });
+    await sleep(1500);
+  } else {
+    // No target found yet — scroll to bottom to trigger lazy load
+    const container = document.querySelector('[class*="styles_column"]') || document.documentElement;
+    container.scrollTop = container.scrollHeight;
+    await sleep(1000);
+    container.scrollTop = container.scrollHeight;
+    await sleep(1500);
+  }
+  // Scroll back to top
+  window.scrollTo(0, 0);
+}
+
 // ---- IMPORT BUTTON ----
 function injectImportButton() {
-  if (document.getElementById("taskflow-import-btn")) return;
+  if (document.getElementById("creflow-import-btn")) return;
 
   const btn = document.createElement("div");
-  btn.id = "taskflow-import-btn";
+  btn.id = "creflow-import-btn";
   btn.innerHTML = `
     <div style="position:fixed;bottom:24px;right:24px;z-index:2147483646;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-      <div id="taskflow-toast" style="display:none;background:#10B981;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:taskflow-fade 0.3s ease"></div>
-      <button id="taskflow-import-trigger" style="background:#1E293B;color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:all 0.2s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+      <div id="creflow-toast" style="display:none;background:#10B981;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:creflow-fade 0.3s ease"></div>
+      <button id="creflow-import-trigger" style="background:#1E293B;color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:all 0.2s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
-        Import to TaskFlow
+        Import to CREFlow
       </button>
     </div>
     <style>
-      @keyframes taskflow-fade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-      #taskflow-import-trigger:hover { background:#0F172A;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.25) }
+      @keyframes creflow-fade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      #creflow-import-trigger:hover { background:#0F172A;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.25) }
+      #creflow-import-trigger.imported { background:#10B981;cursor:default;pointer-events:none; }
+      #creflow-import-trigger.imported:hover { transform:none;box-shadow:0 4px 16px rgba(0,0,0,0.2); }
     </style>
   `;
   document.documentElement.appendChild(btn);
 
-  document.getElementById("taskflow-import-trigger").addEventListener("click", async () => {
-    const trigger = document.getElementById("taskflow-import-trigger");
+  // Check if already imported
+  checkIfImported();
+
+  document.getElementById("creflow-import-trigger").addEventListener("click", async () => {
+    const trigger = document.getElementById("creflow-import-trigger");
+    if (trigger.classList.contains("imported")) return;
     trigger.textContent = "Extracting...";
     trigger.style.pointerEvents = "none";
     trigger.style.opacity = "0.7";
 
     try {
+      await scrollToLoadSections();
       const extracted = await waitForAnyData(9000);
       const uw = calcUnderwriting(extracted, { vacancyPct:8, expenseRatioPct:35, targetCapPct:7.5, marketRentPsf:"", otherIncomeAnnual:0 });
 
       const response = await chrome.runtime.sendMessage({ type:"COSTAR_IMPORT", extracted, uw });
 
-      const toast = document.getElementById("taskflow-toast");
+      const toast = document.getElementById("creflow-toast");
       if (response && response.success) {
-        toast.textContent = "✓ Sent to TaskFlow — open side panel to review";
+        toast.textContent = "✓ Sent to CREFlow — open side panel to review";
         toast.style.background = "#10B981";
       } else {
-        toast.textContent = "✗ Failed — is TaskFlow side panel open?";
+        toast.textContent = "✗ Failed — is CREFlow side panel open?";
         toast.style.background = "#EF4444";
       }
       toast.style.display = "block";
       setTimeout(() => { toast.style.display = "none"; }, 3500);
     } catch (err) {
-      console.error("TaskFlow import error:", err);
-      const toast = document.getElementById("taskflow-toast");
+      console.error("CREFlow import error:", err);
+      const toast = document.getElementById("creflow-toast");
       toast.textContent = "✗ Error extracting data";
       toast.style.background = "#EF4444";
       toast.style.display = "block";
       setTimeout(() => { toast.style.display = "none"; }, 3500);
     }
 
-    trigger.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg> Import to TaskFlow`;
+    trigger.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg> Import to CREFlow`;
     trigger.style.pointerEvents = "auto";
     trigger.style.opacity = "1";
   });
+}
+
+async function checkIfImported() {
+  try {
+    const url = window.location.href;
+    const resp = await chrome.runtime.sendMessage({ type: "CHECK_IF_IMPORTED", url });
+    if (resp && resp.imported) {
+      setImportedState();
+    }
+  } catch(e) { /* extension not ready yet */ }
+}
+
+function setImportedState() {
+  const trigger = document.getElementById("creflow-import-trigger");
+  if (!trigger) return;
+  trigger.classList.add("imported");
+  trigger.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8l3 3 5-5"/></svg> Imported`;
+  trigger.style.pointerEvents = "none";
 }
 
 function isPropertyDetailPage() { return /\/detail\/all-properties\/\d+/.test(window.location.href); }
 
 function checkAndInject() {
   if (isPropertyDetailPage()) injectImportButton();
-  else { const ex = document.getElementById("taskflow-import-btn"); if (ex) ex.remove(); }
+  else { const ex = document.getElementById("creflow-import-btn"); if (ex) ex.remove(); }
 }
 
 checkAndInject();
@@ -314,4 +367,4 @@ const urlObserver = new MutationObserver(() => {
 urlObserver.observe(document.body, { childList: true, subtree: true });
 window.addEventListener("popstate", () => setTimeout(checkAndInject, 500));
 
-console.log("[TaskFlow] CoStar scraper v4.1 loaded — demographics + traffic enabled");
+console.log("[CREFlow] CoStar scraper v4.1 loaded — demographics + traffic enabled");

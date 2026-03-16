@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaskFlow Dashboard</title>
+<title>CREFlow Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -494,7 +494,7 @@ tbody td {
 
 <script>
 // ============================================================
-// TaskFlow Dashboard
+// CREFlow Dashboard
 // Reads from the same Google Sheet the extension syncs to
 // ============================================================
 
@@ -552,6 +552,231 @@ function scoreBg(s) {
   if(s<=3) return"#FEF2F2"; if(s<=6) return"#FFFBEB"; return"#F0FDF4";
 }
 
+// ---- DEAL HEALTH + KPI HELPERS ----
+const PRE_LOI_STAGES_DASH = ["prospecting", "underwriting"];
+
+function getDecayedScoreDash(deal) {
+  const raw = parseFloat(deal.score);
+  if (!raw) return { display: 0, original: 0, decay: 0 };
+  if (!PRE_LOI_STAGES_DASH.includes(deal.stage)) return { display: raw, original: raw, decay: 0 };
+  const created = parseInt(deal.createdAt) || Date.now();
+  const weeks = Math.floor((Date.now() - created) / (7 * 24 * 60 * 60 * 1000));
+  const decay = weeks * 0.5;
+  const display = Math.max(0, raw - decay);
+  return { display: Math.round(display * 10) / 10, original: raw, decay };
+}
+
+function calcDOMDash(listingDate) {
+  if (!listingDate) return null;
+  const listed = new Date(listingDate + "T00:00:00");
+  const now = new Date(); now.setHours(0,0,0,0);
+  const days = Math.floor((now - listed) / 864e5);
+  return days >= 0 ? days : null;
+}
+
+function getDealFlagsDash(d) {
+  if (d.stage === "dead" || d.stage === "loi_accepted") return [];
+  const now = Date.now();
+  const DAY = 864e5;
+  const flags = [];
+  const age = (now - (d.createdAt || now)) / DAY;
+  const callCount = (d.callLog || []).length;
+  const lastCall = callCount ? Math.max(...d.callLog.map(c => c.time || 0)) : 0;
+  const daysSinceLastCall = lastCall ? (now - lastCall) / DAY : age;
+  const stageAge = d.stageChangedDate ? (now - d.stageChangedDate) / DAY : age;
+  const uwAge = d.uwGeneratedDate ? (now - d.uwGeneratedDate) / DAY : 0;
+  const loiAge = d.loiGeneratedDate ? (now - d.loiGeneratedDate) / DAY : 0;
+  const loiSentAge = d.loiSentDate ? (now - new Date(d.loiSentDate + "T00:00:00").getTime()) / DAY : 0;
+
+  if (age > 2 && callCount === 0) flags.push({ type: "No broker call", msg: `📞 Call broker (${Math.floor(age)}d)` });
+  if (!d.brokerReached && age > 5 && callCount > 0 && callCount < 3) flags.push({ type: "Not reached", msg: `📞 Follow up (${Math.floor(age)}d)` });
+  if (d.stage === "prospecting" && stageAge > 4) flags.push({ type: "Stale prospecting", msg: `📋 Stale ${Math.floor(stageAge)}d` });
+  if (d.stage === "underwriting" && !d.uwLink && stageAge > 2) flags.push({ type: "No UW", msg: `📊 Gen UW (${Math.floor(stageAge)}d)` });
+  if (d.uwLink && !d.loiLink && uwAge > 2) flags.push({ type: "No LOI", msg: `📝 Gen LOI (${Math.floor(uwAge)}d)` });
+  if (d.loiLink && d.stage !== "loi" && d.stage !== "loi_accepted" && loiAge > 1) flags.push({ type: "LOI not sent", msg: `📤 Update stage (${Math.floor(loiAge)}d)` });
+  if (d.stage === "loi" && loiSentAge > 3) flags.push({ type: "LOI no response", msg: `📞 LOI follow up (${Math.floor(loiSentAge)}d)` });
+  const ds = getDecayedScoreDash(d);
+  if (ds.display > 0 && ds.display < 5 && PRE_LOI_STAGES_DASH.includes(d.stage)) flags.push({ type: "Low score", msg: `⚠️ Score ${ds.display}` });
+  if (callCount >= 3 && !d.brokerReached && daysSinceLastCall > 5) flags.push({ type: "Can't reach", msg: `🔄 New contact (${callCount} calls)` });
+  return flags;
+}
+
+function renderAcqKPIs() {
+  const all = state.deals;
+  const active = all.filter(d => d.stage !== "dead" && d.stage !== "loi_accepted");
+
+  // Pipeline summary
+  const totalValue = active.reduce((s, d) => s + d.askingPrice, 0);
+  const avgScore = active.length ? (active.reduce((s, d) => s + getDecayedScoreDash(d).display, 0) / active.length) : 0;
+  const domDeals = active.filter(d => calcDOMDash(d.listingDate) !== null);
+  const avgDOM = domDeals.length ? Math.round(domDeals.reduce((s, d) => s + calcDOMDash(d.listingDate), 0) / domDeals.length) : 0;
+  const hotCount = active.filter(d => d.hotList).length;
+
+  // Stage counts
+  const stageCounts = {};
+  ["prospecting","underwriting","loi","loi_accepted","psa","closed","dead"].forEach(s => {
+    stageCounts[s] = all.filter(d => d.stage === s).length;
+  });
+
+  // Conversion funnel
+  const prospCount = stageCounts["prospecting"] || 0;
+  const uwCount = stageCounts["underwriting"] || 0;
+  const loiCount = stageCounts["loi"] || 0;
+  const ddCount = stageCounts["loi_accepted"] || 0;
+  const pToUW = prospCount > 0 ? Math.round((uwCount / prospCount) * 100) : 0;
+  const uwToLOI = uwCount > 0 ? Math.round((loiCount / uwCount) * 100) : 0;
+  const loiToDD = loiCount > 0 ? Math.round((ddCount / loiCount) * 100) : 0;
+
+  // Stage velocity (avg days currently in each stage)
+  const now = Date.now();
+  const DAY = 864e5;
+  function avgStageAge(stageId) {
+    const inStage = active.filter(d => d.stage === stageId && d.stageChangedDate);
+    if (!inStage.length) return null;
+    return Math.round(inStage.reduce((s, d) => s + (now - d.stageChangedDate) / DAY, 0) / inStage.length);
+  }
+  const velProsp = avgStageAge("prospecting");
+  const velUW = avgStageAge("underwriting");
+  const velLOI = avgStageAge("loi");
+
+  // Deal health
+  const flaggedDeals = active.filter(d => getDealFlagsDash(d).length > 0);
+  const flagTypeCounts = {};
+  flaggedDeals.forEach(d => {
+    getDealFlagsDash(d).forEach(f => {
+      flagTypeCounts[f.type] = (flagTypeCounts[f.type] || 0) + 1;
+    });
+  });
+
+  // Stale deals (no activity 7+ days, not dead)
+  const staleDeals = active.filter(d => {
+    const la = d.lastActivity || d.createdAt || 0;
+    return (now - la) > 7 * DAY;
+  });
+
+  let h = `<div style="max-width:1440px;margin:16px auto 0;padding:0 32px">`;
+
+  // ---- Pipeline Summary ----
+  h += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">`;
+  [
+    ["Active Deals", active.length, "deals"],
+    ["Pipeline Value", fmt$(totalValue), "asking price"],
+    ["Avg Score", avgScore ? avgScore.toFixed(1) + "/10" : "—", "decayed"],
+    ["Avg DOM", avgDOM ? avgDOM + " days" : "—", "days on market"],
+    ["Hot List", hotCount, "this week"],
+  ].forEach(([label, val, sub]) => {
+    h += `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${val}</div><div class="stat-sub">${sub}</div></div>`;
+  });
+  h += `</div>`;
+
+  // ---- Conversion Funnel + Stage Velocity row ----
+  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">`;
+
+  // Conversion Funnel
+  h += `<div class="stat-card" style="padding:16px 18px">
+    <div class="stat-label" style="margin-bottom:12px">Conversion Funnel</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+  [
+    { label: "Prospecting", count: prospCount, color: "#6366F1" },
+    { label: "Underwriting", count: uwCount, color: "#E8A838", rate: pToUW },
+    { label: "LOI", count: loiCount, color: "#3B82F6", rate: uwToLOI },
+    { label: "DD", count: ddCount, color: "#0EA5E9", rate: loiToDD },
+  ].forEach((stage, i) => {
+    if (i > 0) {
+      h += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;font-weight:700;color:${stage.rate >= 50 ? '#10B981' : stage.rate >= 25 ? '#E8A838' : '#EF4444'}">${stage.rate}%</span>
+        <span style="color:#CBD5E1;font-size:14px">→</span>
+      </div>`;
+    }
+    h += `<div style="text-align:center">
+      <div style="font-size:18px;font-weight:800;font-family:'Outfit',sans-serif;color:${stage.color}">${stage.count}</div>
+      <div style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">${stage.label}</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  // Stage Velocity
+  h += `<div class="stat-card" style="padding:16px 18px">
+    <div class="stat-label" style="margin-bottom:12px">Stage Velocity (avg days in stage)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">`;
+  [
+    ["Prospecting", velProsp, "#6366F1"],
+    ["Underwriting", velUW, "#E8A838"],
+    ["LOI", velLOI, "#3B82F6"],
+  ].forEach(([label, val, color]) => {
+    h += `<div style="text-align:center;background:var(--border-light);border-radius:8px;padding:10px 8px">
+      <div style="font-size:16px;font-weight:800;font-family:'Outfit',sans-serif;color:${color}">${val !== null ? val + "d" : "—"}</div>
+      <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-top:2px">${label}</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  h += `</div>`; // close grid
+
+  // ---- Deal Health + Stale Deals row ----
+  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">`;
+
+  // Deal Health
+  h += `<div style="background:var(--bg-card);border:1px solid ${flaggedDeals.length ? '#FECACA' : 'var(--border-light)'};border-radius:10px;padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="stat-label" style="color:${flaggedDeals.length ? '#DC2626' : 'var(--text-muted)'}">Deal Health Flags</div>
+      <span style="font-size:18px;font-weight:800;font-family:'Outfit',sans-serif;color:${flaggedDeals.length ? '#DC2626' : '#10B981'}">${flaggedDeals.length}</span>
+    </div>`;
+
+  if (flaggedDeals.length) {
+    // Flag type breakdown
+    if (Object.keys(flagTypeCounts).length) {
+      h += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">`;
+      Object.entries(flagTypeCounts).forEach(([type, cnt]) => {
+        h += `<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">${type}: ${cnt}</span>`;
+      });
+      h += `</div>`;
+    }
+    // List flagged deals
+    h += `<div style="max-height:120px;overflow-y:auto">`;
+    flaggedDeals.slice(0, 8).forEach(d => {
+      const flags = getDealFlagsDash(d);
+      h += `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px">
+        <span style="font-weight:600;color:var(--text)">${esc(d.name)}</span>
+        <span style="color:var(--text-muted)"> — ${flags.map(f => f.msg).join(", ")}</span>
+      </div>`;
+    });
+    if (flaggedDeals.length > 8) h += `<div style="font-size:10px;color:var(--text-muted);padding:4px 0">+${flaggedDeals.length - 8} more</div>`;
+    h += `</div>`;
+  } else {
+    h += `<div style="color:#10B981;font-size:12px;font-weight:600">All deals healthy ✓</div>`;
+  }
+  h += `</div>`;
+
+  // Stale Deals
+  h += `<div style="background:var(--bg-card);border:1px solid ${staleDeals.length ? '#FDE68A' : 'var(--border-light)'};border-radius:10px;padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="stat-label" style="color:${staleDeals.length ? '#D97706' : 'var(--text-muted)'}">Stale Deals (7+ days no activity)</div>
+      <span style="font-size:18px;font-weight:800;font-family:'Outfit',sans-serif;color:${staleDeals.length ? '#D97706' : '#10B981'}">${staleDeals.length}</span>
+    </div>`;
+
+  if (staleDeals.length) {
+    h += `<div style="max-height:140px;overflow-y:auto">`;
+    staleDeals.forEach(d => {
+      const la = d.lastActivity || d.createdAt || 0;
+      const days = Math.floor((now - la) / DAY);
+      h += `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);font-size:11px;display:flex;justify-content:space-between">
+        <span style="font-weight:600;color:var(--text)">${esc(d.name)}</span>
+        <span style="color:#D97706;font-weight:600;font-size:10px">${days}d idle</span>
+      </div>`;
+    });
+    h += `</div>`;
+  } else {
+    h += `<div style="color:#10B981;font-size:12px;font-weight:600">No stale deals ✓</div>`;
+  }
+  h += `</div>`;
+
+  h += `</div>`; // close health row
+
+  h += `</div>`; // close outer wrapper
+  return h;
+}
+
 // ---- AUTH ----
 function initAuth() {
   state.tokenClient = google.accounts.oauth2.initTokenClient({
@@ -579,17 +804,17 @@ async function apiGet(url) {
 }
 
 async function findSpreadsheet() {
-  // Search Drive for the TaskFlow spreadsheet
+  // Search Drive for the CREFlow spreadsheet
   const searchUrl = "https://www.googleapis.com/drive/v3/files?q=" +
-    encodeURIComponent("name='TaskFlow Data' and mimeType='application/vnd.google-apps.spreadsheet'") +
+    encodeURIComponent("name='CREFlow Data' and mimeType='application/vnd.google-apps.spreadsheet'") +
     "&fields=files(id,name)&orderBy=modifiedTime desc";
 
   // Need drive.readonly scope too — but we only have sheets.readonly
   // Instead, try to load from localStorage or prompt for spreadsheet ID
-  let ssId = localStorage.getItem("taskflow_spreadsheet_id");
+  let ssId = localStorage.getItem("creflow_spreadsheet_id");
   if (!ssId) {
-    ssId = prompt("Enter your TaskFlow spreadsheet ID.\n\nYou can find it in the URL of your TaskFlow Data spreadsheet:\nhttps://docs.google.com/spreadsheets/d/{THIS_PART}/edit");
-    if (ssId) localStorage.setItem("taskflow_spreadsheet_id", ssId);
+    ssId = prompt("Enter your CREFlow spreadsheet ID.\n\nYou can find it in the URL of your CREFlow Data spreadsheet:\nhttps://docs.google.com/spreadsheets/d/{THIS_PART}/edit");
+    if (ssId) localStorage.setItem("creflow_spreadsheet_id", ssId);
   }
   state.spreadsheetId = ssId;
 }
@@ -612,6 +837,13 @@ async function loadDeals() {
     obj.sqft = parseFloat(obj.sqft) || 0;
     obj.createdAt = parseInt(obj.createdAt) || Date.now();
     obj.lastActivity = parseInt(obj.lastActivity) || Date.now();
+    obj.uwGeneratedDate = parseInt(obj.uwGeneratedDate) || 0;
+    obj.loiGeneratedDate = parseInt(obj.loiGeneratedDate) || 0;
+    obj.stageChangedDate = parseInt(obj.stageChangedDate) || 0;
+    obj.sfLoiLink = obj.sfLoiLink || "";
+    obj.hotList = obj.hotList === "true" || obj.hotList === true;
+    obj.brokerReached = obj.brokerReached === "true" || obj.brokerReached === true;
+    try { obj.callLog = obj.callLog ? JSON.parse(obj.callLog) : []; } catch(e) { obj.callLog = []; }
     return obj;
   });
   state.loading = false;
@@ -651,23 +883,29 @@ function render() {
   if (state.loading) { app.innerHTML = renderHeader() + `<div class="loading">Loading deals...</div>`; wireHeaderEvents(); return; }
 
   let h = renderHeader();
-  h += renderStats();
-  h += `<div class="main">`;
-  if (state.view === "kanban") h += renderKanban();
-  else h += renderTable();
-  h += `</div>`;
+  if (state.view === "uwcalc") {
+    h += `<div class="main">` + renderUWCalc() + `</div>`;
+  } else {
+    h += renderStats();
+    h += renderAcqKPIs();
+    h += `<div class="main">`;
+    if (state.view === "kanban") h += renderKanban();
+    else h += renderTable();
+    h += `</div>`;
+  }
   if (state.selectedDeal) h += renderModal(state.selectedDeal);
   app.innerHTML = h;
   wireHeaderEvents();
   wireEvents();
+  if (state.view === "uwcalc") wireUWCalcEvents();
 }
 
 function renderLogin() {
   app.innerHTML = `<div class="login-container">
-    <h1>TaskFlow</h1>
+    <h1>CREFlow</h1>
     <p>Deal pipeline dashboard</p>
     <button class="login-btn" id="login-btn">Connect Google Account</button>
-    <span class="login-note">Read-only access to your TaskFlow spreadsheet</span>
+    <span class="login-note">Read-only access to your CREFlow spreadsheet</span>
   </div>`;
   document.getElementById("login-btn").addEventListener("click", doLogin);
 }
@@ -675,10 +913,11 @@ function renderLogin() {
 function renderHeader() {
   return `<div class="header"><div class="header-inner">
     <div class="header-left">
-      <h1>TaskFlow</h1>
+      <h1>CREFlow</h1>
       <div class="view-toggle">
         <button class="view-btn ${state.view==='kanban'?'active':''}" data-view="kanban">Kanban</button>
         <button class="view-btn ${state.view==='table'?'active':''}" data-view="table">Table</button>
+        <button class="view-btn ${state.view==='uwcalc'?'active':''}" data-view="uwcalc">UW Calc</button>
       </div>
     </div>
     <div class="header-right">
@@ -941,6 +1180,87 @@ function wireEvents() {
   }
   const closeBtn = document.getElementById("modal-close");
   if (closeBtn) closeBtn.addEventListener("click", () => { state.selectedDeal = null; render(); });
+}
+
+// ---- QUICK UW CALCULATOR ----
+function renderUWCalc() {
+  const u = state.uwCalc || { price:"", sqft:"", rentPsf:"", vacancy:"8", expenseRatio:"35", targetCap:"7.5" };
+  state.uwCalc = u;
+  const price = parseFloat(u.price)||0;
+  const sf = parseFloat(u.sqft)||0;
+  const rent = parseFloat(u.rentPsf)||0;
+  const vac = parseFloat(u.vacancy)||0;
+  const exp = parseFloat(u.expenseRatio)||0;
+  const cap = parseFloat(u.targetCap)||0;
+  const canCalc = sf && rent && cap;
+  const gpr = sf * rent;
+  const egi = gpr * (1 - vac/100);
+  const noi = egi * (1 - exp/100);
+  const impliedValue = cap > 0 ? noi / (cap/100) : 0;
+  const valuePsf = sf > 0 ? impliedValue / sf : 0;
+  const spread = price > 0 ? impliedValue - price : 0;
+  const spreadPct = price > 0 ? ((impliedValue/price)-1)*100 : 0;
+  const impliedCap = price > 0 ? (noi/price)*100 : 0;
+
+  let h = `<div style="max-width:680px;margin:32px auto;padding:0 24px">`;
+  h += `<h2 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:20px">Quick Underwriting Calculator</h2>`;
+  h += `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px">`;
+  
+  // Input grid
+  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">`;
+  [["Asking Price","uw-d-price",u.price,"4850000"],["Building SF","uw-d-sqft",u.sqft,"14820"],
+   ["Rent / SF","uw-d-rent",u.rentPsf,"18.00"],["Vacancy %","uw-d-vac",u.vacancy,"8"],
+   ["Expense Ratio %","uw-d-exp",u.expenseRatio,"35"],["Target Cap %","uw-d-cap",u.targetCap,"7.5"]
+  ].forEach(([label,id,val,ph]) => {
+    h += `<div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">${label}</label><input type="number" id="${id}" value="${val}" placeholder="${ph}" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;background:var(--bg);box-sizing:border-box"></div>`;
+  });
+  h += `</div>`;
+
+  // Results
+  if (canCalc) {
+    const spreadColor = spread >= 0 ? "#10B981" : "#EF4444";
+    const spreadSign = spread >= 0 ? "+" : "";
+    h += `<div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">`;
+    h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">`;
+    [["Gross Potential Revenue",fmt$(Math.round(gpr))],["Effective Gross Income",fmt$(Math.round(egi))],["Net Operating Income",fmt$(Math.round(noi))],
+     ["Implied Value",fmt$(Math.round(impliedValue))],["Value / SF","$"+Math.round(valuePsf)],["Implied Cap Rate",impliedCap.toFixed(2)+"%"]
+    ].forEach(([l,v]) => {
+      h += `<div style="background:var(--bg);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">${l}</div><div style="font-size:18px;font-weight:800;color:var(--text);margin-top:4px">${v}</div></div>`;
+    });
+    h += `</div>`;
+    if (price > 0) {
+      h += `<div style="margin-top:16px;text-align:center;background:${spread>=0?'#F0FDF4':'#FEF2F2'};border-radius:8px;padding:16px"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Spread vs Asking</div><div style="font-size:24px;font-weight:800;margin-top:4px;color:${spreadColor}">${spreadSign}${fmt$(Math.round(spread))}</div><div style="font-size:13px;color:${spreadColor};font-weight:600">${spreadSign}${spreadPct.toFixed(1)}%</div></div>`;
+    }
+    h += `</div>`;
+  } else {
+    h += `<div style="margin-top:24px;text-align:center;color:var(--text-muted);font-size:13px;padding:20px 0">Enter Rent/SF, Building SF, and Target Cap to see results</div>`;
+  }
+
+  h += `</div></div>`;
+  return h;
+}
+
+function wireUWCalcEvents() {
+  ["uw-d-price","uw-d-sqft","uw-d-rent","uw-d-vac","uw-d-exp","uw-d-cap"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", () => {
+        const map = {"uw-d-price":"price","uw-d-sqft":"sqft","uw-d-rent":"rentPsf","uw-d-vac":"vacancy","uw-d-exp":"expenseRatio","uw-d-cap":"targetCap"};
+        if (!state.uwCalc) state.uwCalc = { price:"", sqft:"", rentPsf:"", vacancy:"8", expenseRatio:"35", targetCap:"7.5" };
+        state.uwCalc[map[id]] = el.value;
+        // Re-render just the results without losing focus
+        const resultsArea = document.querySelector(".uw-results");
+        // Full re-render but refocus
+        const activeId = document.activeElement?.id;
+        const cursorPos = document.activeElement?.selectionStart;
+        render();
+        if (activeId) {
+          const refocus = document.getElementById(activeId);
+          if (refocus) { refocus.focus(); if (cursorPos !== undefined) refocus.setSelectionRange(cursorPos, cursorPos); }
+        }
+      });
+    }
+  });
 }
 
 // ---- INIT ----

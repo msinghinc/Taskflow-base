@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TaskFlow",
+  "name": "CREFlow",
   "version": "4.0.0",
-  "description": "Real estate acquisitions, due diligence, asset management — CoStar, Crexi, LOI generation",
+  "description": "CREFlow — real estate acquisitions, due diligence, asset management — CoStar, Crexi, LOI generation",
   "permissions": [
     "sidePanel",
     "identity",
@@ -44,7 +44,7 @@
     }
   ],
   "action": {
-    "default_title": "Open TaskFlow",
+    "default_title": "Open CREFlow",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

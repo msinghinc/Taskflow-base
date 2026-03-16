@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Analysis — CREFlow DD</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',sans-serif; background:#0B1120; color:#CBD5E1; min-height:100vh; }
+
+.container { max-width:1280px; margin:0 auto; padding:28px 24px; }
+
+/* Header */
+.page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
+.page-header h1 { font-family:'Outfit',sans-serif; font-size:24px; font-weight:800; color:#F8FAFC; }
+.page-header .sub { font-size:12px; color:#64748B; margin-top:3px; }
+.property-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; background:#1E293B; border:1px solid #334155; border-radius:8px; font-size:12px; color:#94A3B8; margin-top:8px; }
+.property-pill strong { color:#F8FAFC; }
+.header-metrics { display:flex; gap:12px; }
+.hm { text-align:center; padding:10px 16px; background:#1E293B; border:1px solid #334155; border-radius:10px; min-width:100px; }
+.hm-val { font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:#F8FAFC; }
+.hm-label { font-size:9px; color:#64748B; text-transform:uppercase; letter-spacing:0.8px; margin-top:2px; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; margin-bottom:20px; background:#1E293B; border-radius:10px; padding:4px; border:1px solid #334155; width:fit-content; }
+.tab { padding:8px 18px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; color:#64748B; transition:all 0.12s; border:none; background:none; font-family:'DM Sans',sans-serif; }
+.tab.active { background:#0B1120; color:#F8FAFC; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+.tab:hover:not(.active) { color:#94A3B8; }
+
+/* Assumptions bar */
+.assumptions { display:flex; gap:16px; padding:12px 16px; background:#1E293B; border:1px solid #334155; border-radius:10px; margin-bottom:20px; flex-wrap:wrap; }
+.assumption { display:flex; align-items:center; gap:6px; font-size:11px; }
+.assumption-label { color:#64748B; }
+.assumption-val { color:#F8FAFC; font-weight:700; font-family:'DM Mono',monospace; }
+
+/* Tables */
+.fin-table { width:100%; border-collapse:collapse; font-size:12px; }
+.fin-table th { text-align:left; padding:8px 12px; font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.8px; border-bottom:2px solid #334155; }
+.fin-table th.year { text-align:right; min-width:110px; }
+.fin-table th.year.current { color:#3B82F6; }
+.fin-table td { padding:6px 12px; border-bottom:1px solid #1A2332; font-family:'DM Mono',monospace; font-size:11px; }
+.fin-table td.label { font-family:'DM Sans',sans-serif; color:#94A3B8; font-weight:500; padding-left:20px; }
+.fin-table td.label.main { color:#F8FAFC; font-weight:700; padding-left:12px; font-size:12px; }
+.fin-table td.label.section { color:#3B82F6; font-weight:700; padding-left:12px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; padding-top:14px; }
+.fin-table td.num { text-align:right; color:#E2E8F0; }
+.fin-table td.num.negative { color:#EF4444; }
+.fin-table td.num.highlight { color:#10B981; font-weight:700; }
+.fin-table td.num.subtotal { font-weight:700; color:#F8FAFC; border-top:1px solid #334155; }
+.fin-table td.psf { text-align:right; color:#64748B; font-size:10px; }
+.fin-table tr.section-break td { border-bottom:2px solid #334155; }
+.fin-table tr.total-row td { border-top:2px solid #475569; border-bottom:2px solid #475569; font-weight:700; }
+.fin-table tr.total-row td.num { color:#F8FAFC; font-size:12px; }
+.fin-table tr:hover td { background:#151D2E; }
+
+/* Card wrapper */
+.card { background:#131B2E; border:1px solid #1E293B; border-radius:12px; overflow:hidden; margin-bottom:20px; }
+.card-header { padding:14px 20px; border-bottom:1px solid #1E293B; display:flex; justify-content:space-between; align-items:center; }
+.card-title { font-family:'Outfit',sans-serif; font-size:15px; font-weight:700; color:#F8FAFC; }
+.card-body { padding:0; overflow-x:auto; }
+
+/* Rent Roll Detail */
+.tenant-block { border-bottom:1px solid #1A2332; padding:16px 20px; }
+.tenant-block:last-child { border-bottom:none; }
+.tenant-block:hover { background:#151D2E; }
+.tb-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.tb-name { font-size:14px; font-weight:700; color:#F8FAFC; }
+.tb-suite { font-size:11px; color:#64748B; }
+.tb-meta { display:flex; gap:16px; font-size:11px; color:#94A3B8; margin-bottom:10px; }
+.tb-meta span { display:flex; align-items:center; gap:4px; }
+.tb-meta strong { color:#E2E8F0; }
+.tb-badge { font-size:9px; padding:3px 8px; border-radius:4px; font-weight:700; }
+.tb-badge.nnn { background:#6366F120; color:#A5B4FC; }
+.tb-badge.gross { background:#10B98120; color:#6EE7B7; }
+
+/* Escalation table */
+.esc-table { width:100%; border-collapse:collapse; margin-top:6px; }
+.esc-table th { text-align:left; padding:4px 10px; font-size:9px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #252F3F; }
+.esc-table td { padding:4px 10px; font-size:11px; font-family:'DM Mono',monospace; color:#CBD5E1; border-bottom:1px solid #1A2332; }
+.esc-table td.bump { color:#F59E0B; font-weight:600; }
+.esc-table tr:first-child td { color:#F8FAFC; font-weight:600; }
+
+.tb-notes { font-size:10px; color:#475569; margin-top:8px; font-style:italic; line-height:1.5; }
+.tb-notes strong { color:#64748B; font-style:normal; }
+
+/* Expiration chart */
+.exp-chart { display:flex; align-items:flex-end; gap:4px; height:200px; padding:20px; }
+.exp-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.exp-bar { width:100%; border-radius:4px 4px 0 0; min-height:2px; transition:all 0.2s; position:relative; cursor:pointer; }
+.exp-bar:hover { filter:brightness(1.3); }
+.exp-bar-label { font-size:10px; color:#64748B; font-weight:600; }
+.exp-bar-val { font-size:9px; color:#94A3B8; font-family:'DM Mono',monospace; }
+.exp-bar-pct { font-size:10px; color:#F8FAFC; font-weight:700; font-family:'DM Mono',monospace; }
+
+/* Expiration table */
+.exp-table { width:100%; border-collapse:collapse; font-size:11px; }
+.exp-table th { text-align:left; padding:8px 12px; font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #334155; }
+.exp-table td { padding:6px 12px; border-bottom:1px solid #1A2332; }
+.exp-table td.tenant { color:#F8FAFC; font-weight:600; }
+.exp-table td.num { font-family:'DM Mono',monospace; text-align:right; color:#E2E8F0; }
+.exp-table td.variance-pos { color:#10B981; font-weight:600; }
+.exp-table td.variance-neg { color:#EF4444; font-weight:600; }
+.exp-table tr.year-total td { background:#1E293B; font-weight:700; color:#F8FAFC; border-top:1px solid #334155; }
+
+/* Today indicator */
+.today-line { position:relative; }
+.today-marker { position:absolute; top:-8px; background:#EF4444; color:#fff; font-size:8px; padding:1px 6px; border-radius:3px; font-weight:700; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>Financial Analysis</h1>
+      <div class="sub">Due Diligence · 5-Year Projection</div>
+      <div class="property-pill">
+        <strong>Antelope West Business Park</strong> · 7307-7337 Roseville Rd, Sacramento, CA · 101,944 SF · 17 Tenants
+      </div>
+    </div>
+    <div class="header-metrics">
+      <div class="hm"><div class="hm-val">$1.20M</div><div class="hm-label">Year 1 NOI</div></div>
+      <div class="hm"><div class="hm-val">$1.37M</div><div class="hm-label">Year 5 NOI</div></div>
+      <div class="hm"><div class="hm-val">3.36</div><div class="hm-label">WALT (yrs)</div></div>
+      <div class="hm"><div class="hm-val">100%</div><div class="hm-label">Occupancy</div></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('cashflow')">Cash Flow</button>
+    <button class="tab" onclick="showTab('rentroll')">Rent Roll</button>
+    <button class="tab" onclick="showTab('expirations')">Expirations</button>
+  </div>
+
+  <!-- Assumptions Bar -->
+  <div class="assumptions">
+    <div class="assumption"><span class="assumption-label">CPI Growth</span><span class="assumption-val">3.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Expense Growth</span><span class="assumption-val">3.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Tax Growth</span><span class="assumption-val">2.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Market Rent Growth</span><span class="assumption-val">3.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Vacancy Loss</span><span class="assumption-val">3.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Mgmt Fee</span><span class="assumption-val">3.00%</span></div>
+    <div class="assumption"><span class="assumption-label">Cap Reserves</span><span class="assumption-val">$0.20/SF</span></div>
+    <div class="assumption"><span class="assumption-label">Retention</span><span class="assumption-val">75%</span></div>
+  </div>
+
+  <!-- CASH FLOW TAB -->
+  <div id="tab-cashflow">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Cash Flow Projections</div>
+        <div style="font-size:10px;color:#64748B">Fiscal Year Ending April 30</div>
+      </div>
+      <div class="card-body">
+        <table class="fin-table">
+          <thead>
+            <tr>
+              <th style="width:220px"></th>
+              <th style="width:70px">$/SF/YR</th>
+              <th class="year current">FY 2027</th>
+              <th class="year">FY 2028</th>
+              <th class="year">FY 2029</th>
+              <th class="year">FY 2030</th>
+              <th class="year">FY 2031</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="label main" colspan="2">Physical Occupancy</td><td class="num">99.76%</td><td class="num">99.55%</td><td class="num">97.65%</td><td class="num">96.55%</td><td class="num">100.00%</td></tr>
+            <tr><td class="label main" colspan="2">Economic Occupancy</td><td class="num">96.91%</td><td class="num">96.82%</td><td class="num">95.83%</td><td class="num">95.18%</td><td class="num">96.91%</td></tr>
+            <tr><td class="label main" colspan="2">Wtd Avg In-Place Rent</td><td class="num">$1.02</td><td class="num">$1.06</td><td class="num">$1.09</td><td class="num">$1.11</td><td class="num">$1.16</td></tr>
+            <tr><td class="label main" colspan="2">Lease SF Expiring</td><td class="num">2,950</td><td class="num">5,500</td><td class="num">28,694</td><td class="num">39,280</td><td class="num">0</td></tr>
+
+            <tr><td class="label section" colspan="7">Revenue</td></tr>
+            <tr><td class="label">Gross Potential Rent</td><td class="psf">$12.28</td><td class="num">$1,252,248</td><td class="num">$1,301,255</td><td class="num">$1,348,902</td><td class="num">$1,387,276</td><td class="num">$1,425,964</td></tr>
+            <tr><td class="label">Vacancy & Turnover</td><td class="psf">($0.03)</td><td class="num negative">($3,251)</td><td class="num negative">($6,429)</td><td class="num negative">($31,915)</td><td class="num negative">($49,643)</td><td class="num">$0</td></tr>
+            <tr><td class="label">Free Rent</td><td class="psf">($0.68)</td><td class="num negative">($69,686)</td><td class="num negative">($3,215)</td><td class="num negative">($13,911)</td><td class="num negative">($25,092)</td><td class="num negative">($1,776)</td></tr>
+            <tr class="section-break"><td class="label main">Total Scheduled Base Rent</td><td class="psf">$11.57</td><td class="num subtotal">$1,179,311</td><td class="num subtotal">$1,291,611</td><td class="num subtotal">$1,303,076</td><td class="num subtotal">$1,312,541</td><td class="num subtotal">$1,424,188</td></tr>
+            <tr><td class="label">Expense Recoveries</td><td class="psf">$4.45</td><td class="num">$453,727</td><td class="num">$464,528</td><td class="num">$466,810</td><td class="num">$473,266</td><td class="num">$503,352</td></tr>
+            <tr><td class="label">Seller Rent Abatement Credit</td><td class="psf">$0.67</td><td class="num">$68,060</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td></tr>
+            <tr><td class="label main">Total Gross Revenue</td><td class="psf">$16.69</td><td class="num subtotal">$1,701,098</td><td class="num subtotal">$1,756,139</td><td class="num subtotal">$1,769,886</td><td class="num subtotal">$1,785,808</td><td class="num subtotal">$1,927,540</td></tr>
+            <tr><td class="label">General Vacancy Loss</td><td class="psf">($0.47)</td><td class="num negative">($47,879)</td><td class="num negative">($46,448)</td><td class="num negative">($29,816)</td><td class="num negative">($14,957)</td><td class="num negative">($57,826)</td></tr>
+            <tr class="section-break"><td class="label main">Effective Gross Revenue</td><td class="psf">$16.22</td><td class="num subtotal">$1,653,219</td><td class="num subtotal">$1,709,691</td><td class="num subtotal">$1,740,070</td><td class="num subtotal">$1,770,850</td><td class="num subtotal">$1,869,714</td></tr>
+
+            <tr><td class="label section" colspan="7">Operating Expenses</td></tr>
+            <tr><td class="label">Repairs & Maintenance</td><td class="psf">($0.90)</td><td class="num negative">($91,720)</td><td class="num negative">($94,471)</td><td class="num negative">($97,306)</td><td class="num negative">($100,225)</td><td class="num negative">($103,231)</td></tr>
+            <tr><td class="label">Fire, Life & Safety</td><td class="psf">($0.11)</td><td class="num negative">($11,027)</td><td class="num negative">($11,358)</td><td class="num negative">($11,699)</td><td class="num negative">($12,050)</td><td class="num negative">($12,411)</td></tr>
+            <tr><td class="label">Utilities</td><td class="psf">($0.57)</td><td class="num negative">($58,154)</td><td class="num negative">($59,898)</td><td class="num negative">($61,695)</td><td class="num negative">($63,546)</td><td class="num negative">($65,453)</td></tr>
+            <tr><td class="label">Management Fee</td><td class="psf">($0.49)</td><td class="num negative">($49,597)</td><td class="num negative">($51,291)</td><td class="num negative">($52,202)</td><td class="num negative">($53,125)</td><td class="num negative">($56,091)</td></tr>
+            <tr><td class="label">Insurance</td><td class="psf">($0.39)</td><td class="num negative">($39,538)</td><td class="num negative">($40,724)</td><td class="num negative">($41,946)</td><td class="num negative">($43,204)</td><td class="num negative">($44,500)</td></tr>
+            <tr><td class="label">Real Estate Taxes</td><td class="psf">($2.01)</td><td class="num negative">($204,800)</td><td class="num negative">($208,892)</td><td class="num negative">($213,066)</td><td class="num negative">($217,323)</td><td class="num negative">($221,665)</td></tr>
+            <tr class="section-break"><td class="label main">Total Operating Expenses</td><td class="psf">($4.46)</td><td class="num subtotal">($454,836)</td><td class="num subtotal">($466,635)</td><td class="num subtotal">($477,913)</td><td class="num subtotal">($489,473)</td><td class="num subtotal">($503,352)</td></tr>
+
+            <tr class="total-row"><td class="label main" style="font-size:13px">Net Operating Income</td><td class="psf" style="font-weight:700;color:#10B981">$11.76</td><td class="num highlight">$1,198,383</td><td class="num highlight">$1,243,056</td><td class="num highlight">$1,262,156</td><td class="num highlight">$1,281,377</td><td class="num highlight">$1,366,362</td></tr>
+
+            <tr><td class="label section" colspan="7">Capital Costs</td></tr>
+            <tr><td class="label">Tenant Improvements</td><td class="psf">($0.04)</td><td class="num negative">($3,688)</td><td class="num negative">($6,875)</td><td class="num negative">($31,493)</td><td class="num negative">($45,338)</td><td class="num negative">($3,688)</td></tr>
+            <tr><td class="label">Leasing Commissions</td><td class="psf">($0.05)</td><td class="num negative">($4,754)</td><td class="num negative">($9,401)</td><td class="num negative">($40,682)</td><td class="num negative">($73,378)</td><td class="num negative">($5,195)</td></tr>
+            <tr><td class="label">Capital Reserves</td><td class="psf">($0.20)</td><td class="num negative">($20,593)</td><td class="num negative">($21,210)</td><td class="num negative">($21,847)</td><td class="num negative">($22,502)</td><td class="num negative">($23,177)</td></tr>
+            <tr><td class="label">Misc Capital Expenditure</td><td class="psf">($2.94)</td><td class="num negative">($300,000)</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td><td class="num">$0</td></tr>
+            <tr class="section-break"><td class="label main">Total Capital Costs</td><td class="psf">($3.23)</td><td class="num subtotal">($329,034)</td><td class="num subtotal">($37,486)</td><td class="num subtotal">($94,021)</td><td class="num subtotal">($141,218)</td><td class="num subtotal">($32,059)</td></tr>
+
+            <tr class="total-row"><td class="label main" style="font-size:13px">Operating Cash Flow</td><td class="psf" style="font-weight:700;color:#3B82F6">$8.53</td><td class="num" style="color:#3B82F6;font-size:13px">$869,349</td><td class="num" style="color:#3B82F6;font-size:13px">$1,205,570</td><td class="num" style="color:#3B82F6;font-size:13px">$1,168,135</td><td class="num" style="color:#3B82F6;font-size:13px">$1,140,160</td><td class="num" style="color:#3B82F6;font-size:13px">$1,334,302</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RENT ROLL TAB -->
+  <div id="tab-rentroll" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Rent Roll Detail — As of 5/1/2026</div>
+        <div style="display:flex;gap:12px;font-size:11px;color:#94A3B8">
+          <span>101,944 SF</span>
+          <span>17 Tenants</span>
+          <span>WALT: 3.36 yrs</span>
+          <span>Avg: $1.01/SF NNN</span>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+
+        <!-- Tenant 1 -->
+        <div class="tenant-block">
+          <div class="tb-header">
+            <div><div class="tb-name">Gates and Controls</div><div class="tb-suite">Suite 7307-01</div></div>
+            <span class="tb-badge nnn">NNN</span>
+          </div>
+          <div class="tb-meta">
+            <span>SF: <strong>6,494</strong></span>
+            <span>Lease: <strong>Apr 2010 — Aug 2028</strong></span>
+            <span>Market: <strong>$1.02 NNN</strong></span>
+            <span>Retention: <strong>75%</strong></span>
+          </div>
+          <table class="esc-table">
+            <thead><tr><th>Period</th><th>Monthly</th><th>PSF</th><th>Annual</th><th>Annual PSF</th><th>Bump</th></tr></thead>
+            <tbody>
+              <tr><td>Current</td><td>$6,545</td><td>$1.01</td><td>$78,540</td><td>$12.09</td><td>—</td></tr>
+              <tr><td>Sep 2026</td><td>$6,741</td><td>$1.04</td><td>$80,896</td><td>$12.46</td><td class="bump">3.00%</td></tr>
+              <tr><td>Sep 2027</td><td>$6,944</td><td>$1.07</td><td>$83,323</td><td>$12.83</td><td class="bump">3.00%</td></tr>
+            </tbody>
+          </table>
+          <div class="tb-notes"><strong>Notes:</strong> Lease extension commenced 9/1/2023. Tenant pays landlord a reasonable allowance for supervision of Common Areas (not to exceed 5.0% of Gross Rents).</div>
+        </div>
+
+        <!-- Tenant 2 -->
+        <div class="tenant-block">
+          <div class="tb-header">
+            <div><div class="tb-name">Heating and Cooling LLC</div><div class="tb-suite">Suite 7321-1C</div></div>
+            <span class="tb-badge nnn">NNN</span>
+          </div>
+          <div class="tb-meta">
+            <span>SF: <strong>25,520</strong> (25.03%)</span>
+            <span>Lease: <strong>Apr 2021 — Jun 2031</strong></span>
+            <span>Market: <strong>$0.95 NNN</strong></span>
+            <span>Retention: <strong>75%</strong></span>
+          </div>
+          <table class="esc-table">
+            <thead><tr><th>Period</th><th>Monthly</th><th>PSF</th><th>Annual</th><th>Annual PSF</th><th>Bump</th></tr></thead>
+            <tbody>
+              <tr><td>Current</td><td>$24,244</td><td>$0.95</td><td>$290,928</td><td>$11.40</td><td>—</td></tr>
+              <tr><td>Jul 2027</td><td>$25,093</td><td>$0.98</td><td>$301,116</td><td>$11.80</td><td class="bump">3.50%</td></tr>
+              <tr><td>Jul 2028</td><td>$25,971</td><td>$1.02</td><td>$311,652</td><td>$12.21</td><td class="bump">3.50%</td></tr>
+              <tr><td>Jul 2029</td><td>$26,880</td><td>$1.05</td><td>$322,560</td><td>$12.64</td><td class="bump">3.50%</td></tr>
+              <tr><td>Jul 2030</td><td>$27,820</td><td>$1.09</td><td>$333,840</td><td>$13.08</td><td class="bump">3.50%</td></tr>
+            </tbody>
+          </table>
+          <div class="tb-notes"><strong>Notes:</strong> Lease extension commenced 4/1/2026. Seller is assumed to credit all free rent prior to the close of escrow. Free rent: 05/26-06/26 (100%).</div>
+        </div>
+
+        <!-- Tenant 3 -->
+        <div class="tenant-block">
+          <div class="tb-header">
+            <div><div class="tb-name">Body Worx Collision LLC</div><div class="tb-suite">Suite 7337-01</div></div>
+            <span class="tb-badge nnn">NNN</span>
+          </div>
+          <div class="tb-meta">
+            <span>SF: <strong>9,600</strong> (9.42%)</span>
+            <span>Lease: <strong>May 2024 — Jul 2029</strong></span>
+            <span>Market: <strong>$1.10 NNN</strong></span>
+            <span>Retention: <strong>75%</strong></span>
+          </div>
+          <table class="esc-table">
+            <thead><tr><th>Period</th><th>Monthly</th><th>PSF</th><th>Annual</th><th>Annual PSF</th><th>Bump</th></tr></thead>
+            <tbody>
+              <tr><td>Current</td><td>$10,483</td><td>$1.09</td><td>$125,798</td><td>$13.10</td><td>—</td></tr>
+              <tr><td>Aug 2026</td><td>$10,903</td><td>$1.14</td><td>$130,830</td><td>$13.63</td><td class="bump">4.00%</td></tr>
+              <tr><td>Aug 2027</td><td>$11,339</td><td>$1.18</td><td>$136,064</td><td>$14.17</td><td class="bump">4.00%</td></tr>
+              <tr><td>Aug 2028</td><td>$11,792</td><td>$1.23</td><td>$141,506</td><td>$14.74</td><td class="bump">4.00%</td></tr>
+            </tbody>
+          </table>
+          <div class="tb-notes"><strong>Notes:</strong> Guaranteed by Michael Espinoza. One (1) Five (5) year option to renew at greater of 4.0% annual increase or FMV, 180 days notice.</div>
+        </div>
+
+        <!-- More tenants would follow same pattern... -->
+        <div style="padding:16px 20px;text-align:center;color:#475569;font-size:12px">
+          + 14 more tenants (same format)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPIRATIONS TAB -->
+  <div id="tab-expirations" style="display:none">
+
+    <!-- Expiration Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Lease Expiration Schedule</div>
+        <div style="font-size:10px;color:#64748B">% of Building SF Expiring by Fiscal Year</div>
+      </div>
+      <div class="card-body" style="padding:20px">
+        <div class="exp-chart">
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">2.89%</div>
+            <div class="exp-bar" style="height:14px;background:#3B82F6"></div>
+            <div class="exp-bar-label">FY 2027</div>
+            <div class="exp-bar-val">2,950 SF</div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">5.40%</div>
+            <div class="exp-bar" style="height:27px;background:#3B82F6"></div>
+            <div class="exp-bar-label">FY 2028</div>
+            <div class="exp-bar-val">5,500 SF</div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">28.15%</div>
+            <div class="exp-bar" style="height:112px;background:#E8A838"></div>
+            <div class="exp-bar-label">FY 2029</div>
+            <div class="exp-bar-val">28,694 SF</div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">38.53%</div>
+            <div class="exp-bar" style="height:154px;background:#EF4444"></div>
+            <div class="exp-bar-label">FY 2030</div>
+            <div class="exp-bar-val">39,280 SF</div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">0%</div>
+            <div class="exp-bar" style="height:2px;background:#334155"></div>
+            <div class="exp-bar-label">FY 2031</div>
+            <div class="exp-bar-val">0 SF</div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-pct">25.03%</div>
+            <div class="exp-bar" style="height:100px;background:#8B5CF6"></div>
+            <div class="exp-bar-label">FY 2032</div>
+            <div class="exp-bar-val">25,520 SF</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expiration Detail Table -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Expiration Detail — Contract vs Market</div>
+      </div>
+      <div class="card-body">
+        <table class="exp-table">
+          <thead>
+            <tr>
+              <th>Expiration</th>
+              <th>Tenant</th>
+              <th>Suite</th>
+              <th style="text-align:right">SF</th>
+              <th style="text-align:right">% of Bldg</th>
+              <th style="text-align:right">Cumulative</th>
+              <th style="text-align:right">Contract Rent</th>
+              <th style="text-align:right">Market Rent</th>
+              <th style="text-align:right">$ Variance</th>
+              <th style="text-align:right">% Variance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Dec 2026</td><td class="tenant">Tangent Products</td><td>7307-09</td><td class="num">2,950</td><td class="num">2.89%</td><td class="num"></td><td class="num">$0.81</td><td class="num">$1.07</td><td class="variance-neg" style="text-align:right">($0.26)</td><td class="variance-neg" style="text-align:right">-24.30%</td></tr>
+            <tr class="year-total"><td colspan="3">FY 2027 Total</td><td class="num">2,950</td><td class="num">2.89%</td><td class="num">2.89%</td><td class="num">$0.81</td><td class="num">$1.07</td><td></td><td></td></tr>
+
+            <tr><td>Feb 2028</td><td class="tenant">Missionary Slavic Church</td><td>7307-08</td><td class="num">3,000</td><td class="num">2.94%</td><td class="num"></td><td class="num">$1.07</td><td class="num">$1.14</td><td class="variance-neg" style="text-align:right">($0.07)</td><td class="variance-neg" style="text-align:right">-5.81%</td></tr>
+            <tr><td>Feb 2028</td><td class="tenant">Stewart Title</td><td>7307-13</td><td class="num">2,500</td><td class="num">2.45%</td><td class="num"></td><td class="num">$1.24</td><td class="num">$1.21</td><td class="variance-pos" style="text-align:right">$0.03</td><td class="variance-pos" style="text-align:right">2.32%</td></tr>
+            <tr class="year-total"><td colspan="3">FY 2028 Total</td><td class="num">5,500</td><td class="num">5.40%</td><td class="num">8.29%</td><td class="num">$1.15</td><td class="num">$1.17</td><td></td><td></td></tr>
+
+            <tr><td>Jun 2028</td><td class="tenant">Kitchen & Bath Depot</td><td>7307-18</td><td class="num">7,984</td><td class="num">7.83%</td><td class="num"></td><td class="num">$1.06</td><td class="num">$1.06</td><td style="text-align:right;color:#64748B">$0.00</td><td style="text-align:right;color:#64748B">-0.24%</td></tr>
+            <tr><td>Aug 2028</td><td class="tenant">Gates and Controls</td><td>7307-01</td><td class="num">6,494</td><td class="num">6.37%</td><td class="num"></td><td class="num">$1.07</td><td class="num">$1.08</td><td class="variance-neg" style="text-align:right">($0.01)</td><td class="variance-neg" style="text-align:right">-1.20%</td></tr>
+            <tr><td>Oct 2028</td><td class="tenant">Pacific Decorative Concrete</td><td>7307-07</td><td class="num">3,000</td><td class="num">2.94%</td><td class="num"></td><td class="num">$1.04</td><td class="num">$1.14</td><td class="variance-neg" style="text-align:right">($0.10)</td><td class="variance-neg" style="text-align:right">-8.53%</td></tr>
+            <tr><td>Oct 2028</td><td class="tenant">Katie's Stores</td><td>7307-12</td><td class="num">3,000</td><td class="num">2.94%</td><td class="num"></td><td class="num">$0.99</td><td class="num">$1.14</td><td class="variance-neg" style="text-align:right">($0.15)</td><td class="variance-neg" style="text-align:right">-13.08%</td></tr>
+            <tr><td>Jan 2029</td><td class="tenant">Sean O'Shea</td><td>7307-05</td><td class="num">4,716</td><td class="num">4.63%</td><td class="num"></td><td class="num">$1.07</td><td class="num">$1.17</td><td class="variance-neg" style="text-align:right">($0.10)</td><td class="variance-neg" style="text-align:right">-8.41%</td></tr>
+            <tr><td>Mar 2029</td><td class="tenant">R & B Framing</td><td>7307-06</td><td class="num">3,500</td><td class="num">3.43%</td><td class="num"></td><td class="num">$1.11</td><td class="num">$1.17</td><td class="variance-neg" style="text-align:right">($0.06)</td><td class="variance-neg" style="text-align:right">-4.71%</td></tr>
+            <tr class="year-total"><td colspan="3">FY 2029 Total</td><td class="num">28,694</td><td class="num">28.15%</td><td class="num">36.44%</td><td class="num">$1.06</td><td class="num">$1.11</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 // ============================================================
-// TaskFlow Crexi Scraper (merged from Crexi Capture)
+// CREFlow Crexi Scraper (merged from Crexi Capture)
 // Runs on www.crexi.com/properties/* pages
-// Extracts property data and sends to TaskFlow side panel
+// Extracts property data and sends to CREFlow side panel
 // ============================================================
 
 // ---- HELPERS ----
@@ -180,65 +180,33 @@ async function waitForAnyData(timeoutMs = 8000) {
 
 // ---- IMPORT BUTTON ----
 function injectImportButton() {
-  if (document.getElementById("taskflow-crexi-btn")) return;
+  if (document.getElementById("creflow-crexi-btn")) return;
 
   const btn = document.createElement("div");
-  btn.id = "taskflow-crexi-btn";
+  btn.id = "creflow-crexi-btn";
   btn.innerHTML = `
-    <div style="
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 2147483646;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    ">
-      <div id="taskflow-crexi-toast" style="
-        display: none;
-        background: #10B981;
-        color: #fff;
-        padding: 8px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        animation: taskflow-crexi-fade 0.3s ease;
-      "></div>
-      <button id="taskflow-crexi-trigger" style="
-        background: #1E293B;
-        color: #fff;
-        border: none;
-        border-radius: 12px;
-        padding: 12px 20px;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        transition: all 0.2s;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      ">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M8 2v8M5 7l3 3 3-3"/>
-          <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/>
-        </svg>
-        Import to TaskFlow
+    <div style="position:fixed;bottom:24px;right:24px;z-index:2147483646;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+      <div id="creflow-crexi-toast" style="display:none;background:#10B981;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:creflow-crexi-fade 0.3s ease"></div>
+      <button id="creflow-crexi-trigger" style="background:#1E293B;color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:all 0.2s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
+        Import to CREFlow
       </button>
     </div>
     <style>
-      @keyframes taskflow-crexi-fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-      #taskflow-crexi-trigger:hover { background: #0F172A; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+      @keyframes creflow-crexi-fade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      #creflow-crexi-trigger:hover { background:#0F172A;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.25) }
+      #creflow-crexi-trigger.imported { background:#10B981;cursor:default;pointer-events:none; }
+      #creflow-crexi-trigger.imported:hover { transform:none;box-shadow:0 4px 16px rgba(0,0,0,0.2); }
     </style>
   `;
   document.documentElement.appendChild(btn);
 
-  document.getElementById("taskflow-crexi-trigger").addEventListener("click", async () => {
-    const trigger = document.getElementById("taskflow-crexi-trigger");
+  // Check if already imported
+  checkIfCrexiImported();
+
+  document.getElementById("creflow-crexi-trigger").addEventListener("click", async () => {
+    const trigger = document.getElementById("creflow-crexi-trigger");
+    if (trigger.classList.contains("imported")) return;
     trigger.textContent = "Extracting...";
     trigger.style.pointerEvents = "none";
     trigger.style.opacity = "0.7";
@@ -251,35 +219,44 @@ function injectImportButton() {
         extracted
       });
 
-      const toast = document.getElementById("taskflow-crexi-toast");
+      const toast = document.getElementById("creflow-crexi-toast");
       if (response && response.success) {
-        toast.textContent = "✓ Sent to TaskFlow — open side panel to review";
+        toast.textContent = "✓ Sent to CREFlow — open side panel to review";
         toast.style.background = "#10B981";
       } else {
-        toast.textContent = "✗ Failed — is TaskFlow side panel open?";
+        toast.textContent = "✗ Failed — is CREFlow side panel open?";
         toast.style.background = "#EF4444";
       }
       toast.style.display = "block";
       setTimeout(() => { toast.style.display = "none"; }, 3500);
     } catch (err) {
-      console.error("TaskFlow Crexi import error:", err);
-      const toast = document.getElementById("taskflow-crexi-toast");
+      console.error("CREFlow Crexi import error:", err);
+      const toast = document.getElementById("creflow-crexi-toast");
       toast.textContent = "✗ Error extracting data";
       toast.style.background = "#EF4444";
       toast.style.display = "block";
       setTimeout(() => { toast.style.display = "none"; }, 3500);
     }
 
-    trigger.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M8 2v8M5 7l3 3 3-3"/>
-        <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/>
-      </svg>
-      Import to TaskFlow
-    `;
+    trigger.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg> Import to CREFlow`;
     trigger.style.pointerEvents = "auto";
     trigger.style.opacity = "1";
   });
+}
+
+async function checkIfCrexiImported() {
+  try {
+    const url = window.location.href;
+    const resp = await chrome.runtime.sendMessage({ type: "CHECK_IF_IMPORTED", url });
+    if (resp && resp.imported) {
+      const trigger = document.getElementById("creflow-crexi-trigger");
+      if (trigger) {
+        trigger.classList.add("imported");
+        trigger.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8l3 3 5-5"/></svg> Imported`;
+        trigger.style.pointerEvents = "none";
+      }
+    }
+  } catch(e) { /* extension not ready */ }
 }
 
 // ---- DETECT PROPERTY PAGES & INJECT ----
@@ -291,7 +268,7 @@ function checkAndInject() {
   if (isPropertyPage()) {
     injectImportButton();
   } else {
-    const existing = document.getElementById("taskflow-crexi-btn");
+    const existing = document.getElementById("creflow-crexi-btn");
     if (existing) existing.remove();
   }
 }
@@ -309,4 +286,4 @@ const urlObserver = new MutationObserver(() => {
 urlObserver.observe(document.body, { childList: true, subtree: true });
 window.addEventListener("popstate", () => setTimeout(checkAndInject, 500));
 
-console.log("[TaskFlow] Crexi scraper loaded");
+console.log("[CREFlow] Crexi scraper loaded");
